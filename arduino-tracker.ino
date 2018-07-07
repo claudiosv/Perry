@@ -169,7 +169,7 @@ void loop()
     if (logCounter == 0)
     {
         // Log the current location to the path feed, then reset the counter.
-        logLocation(latitude, longitude, altitude, path);
+        logLocation(latitude, longitude, speed_kph, heading, altitude, path);
         logCounter = LOGGING_PERIOD_SEC * 1000;
     }
 }
@@ -199,7 +199,7 @@ SIGNAL(TIMER0_COMPA_vect)
 }
 
 // Serialize the lat, long, altitude to a CSV string that can be published to the specified feed.
-void logLocation(float latitude, float longitude, float altitude, Adafruit_MQTT_Publish &publishFeed)
+void logLocation(float latitude, float longitude, float speed_kph, float heading, float altitude, Adafruit_MQTT_Publish &publishFeed)
 {
     // Initialize a string buffer to hold the data that will be published.
     char sendBuffer[120];
@@ -214,9 +214,19 @@ void logLocation(float latitude, float longitude, float altitude, Adafruit_MQTT_
     dtostrf(latitude, 2, 6, &sendBuffer[index]);
     index += strlen(&sendBuffer[index]);
     sendBuffer[index++] = ',';
+
     dtostrf(longitude, 3, 6, &sendBuffer[index]);
     index += strlen(&sendBuffer[index]);
     sendBuffer[index++] = ',';
+
+    dtostrf(speed_kph, 4, 2, &sendBuffer[index]);
+    index += strlen(&sendBuffer[index]);
+    sendBuffer[index++] = ',';
+
+    dtostrf(heading, 3, 3, &sendBuffer[index]);
+    index += strlen(&sendBuffer[index]);
+    sendBuffer[index++] = ',';
+
     dtostrf(altitude, 2, 6, &sendBuffer[index]);
 
     // Finally publish the string to the feed.
