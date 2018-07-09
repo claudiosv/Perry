@@ -1,24 +1,21 @@
-var restify = require('restify');
+const restify = require('restify');
 const errors = require('restify-errors');
 const corsMiddleware = require('restify-cors-middleware');
 const mongoose = require('mongoose');
-const port = process.env.PORT || 3000;
-const controller = require('./products.controller');
 const mqtt = require('mqtt');
 const client = mqtt.connect('mqtt://broker.hivemq.com');
+const port = process.env.PORT || 8080;
 
 mongoose.connect('mongodb://test:testtest1@ds255958.mlab.com:55958/gps-data');
-var db = mongoose.connection;
+const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {
-  // we're connected!
-  console.log("we're connected!");
+  console.log('Connected to mongodb');
 });
 
 client.on('connect', () => {
   console.log('connected to broker');
   client.subscribe('gps-data-testiot/update');
-  //client.subscribe('garage/state');
 });
 
 client.on('message', (topic, message) => {
@@ -43,7 +40,7 @@ client.on('message', (topic, message) => {
   console.log('No handler for topic %s', topic);
 });
 
-var GPSData = new mongoose.Schema({
+const GPSData = new mongoose.Schema({
   latitude: Number,
   longitude: Number,
   speed: Number,
@@ -51,7 +48,7 @@ var GPSData = new mongoose.Schema({
   altitude: Number,
   date_added: Date
 });
-var GPSModel = mongoose.model('people', GPSData, 'peoples1');
+const GPSModel = mongoose.model('people', GPSData, 'peoples1');
 
 const server = restify.createServer({
   name: 'restify headstart'
@@ -64,7 +61,6 @@ const cors = corsMiddleware({
 });
 
 server.use(restify.plugins.bodyParser());
-
 server.pre(cors.preflight);
 server.use(cors.actual);
 
@@ -74,12 +70,7 @@ server.pre((req, res, next) => {
 });
 
 server.get('/locations', (req, res, next) => {
-  //if (!req.params.id) {
-  //  return next(new errors.BadRequestError());
-  //}
   try {
-    //const product = controller.getById(+req.params.id);
-
     GPSModel.find(
       {},
       null,
@@ -89,15 +80,11 @@ server.get('/locations', (req, res, next) => {
           date_added: -1 //Sort by Date Added DESC
         }
       },
-      function(err, kittens) {
+      function(err, locations) {
         if (err) return console.error(err);
-        //console.log('Kittens: ');
-        //console.log(kittens);
-        res.send(200, kittens);
+        res.send(200, locations);
       }
     ).sort;
-
-    client.publish('gps-data-testiot/update', '0,46.492260,11.321162,0.11,317');
 
     return next();
   } catch (error) {
@@ -105,6 +92,6 @@ server.get('/locations', (req, res, next) => {
   }
 });
 
-server.listen(8080, () => {
+server.listen(port, () => {
   console.log('%s listening at %s', server.name, server.url);
 });
