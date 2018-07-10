@@ -1,0 +1,16 @@
+# Perry configuration file
+[mongodb]
+user = "test"
+password = "testtest1"
+hostname = "ds255958.mlab.com"
+port = 55958
+database = "gps-data"
+
+[mqtt]
+hostname = "broker.hivemq.com"
+username = ""
+password = ""
+
+[panel]
+port = 8080
+token = "jnjrineifnajen"

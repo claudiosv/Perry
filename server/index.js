@@ -1,12 +1,23 @@
+"use strict";
 const restify = require('restify');
 const errors = require('restify-errors');
 const corsMiddleware = require('restify-cors-middleware');
 const mongoose = require('mongoose');
+const format = require('string-format')
 const mqtt = require('mqtt');
-const client = mqtt.connect('mqtt://broker.hivemq.com');
-const port = process.env.PORT || 8080;
 
-mongoose.connect('mongodb://test:testtest1@ds255958.mlab.com:55958/gps-data');
+const fs = require('fs');
+const toml = require('toml');
+try {
+  const config = toml.parse(fs.readFileSync('./config.toml', 'utf-8'));
+} catch (e) {
+  console.error("Parsing error on line " + e.line + ", column " + e.column +
+    ": " + e.message);
+}
+
+
+const client = mqtt.connect('mqtt://{hostname}'.format(config.mqtt), { username: config.mqtt.username, password: config.mqtt.password });
+mongoose.connect('mongodb://{username}:{password}@{hostname}:{port}/{database}'.format(config.mongodb));
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {
@@ -16,6 +27,9 @@ db.once('open', function() {
 client.on('connect', () => {
   console.log('connected to broker');
   client.subscribe('gps-data-testiot/update');
+  //Subscribe to all the topics
+  //Each device has 1 unique topic
+  //So fetch all devices from mongodb and subscribe
 });
 
 client.on('message', (topic, message) => {
@@ -23,7 +37,7 @@ client.on('message', (topic, message) => {
   switch (topic) {
     case 'gps-data-testiot/update':
       let data = message.toString().split(',');
-      if (data[0] != '0') return;
+      if (data[0] != 'P') return;
       let fluffy = new GPSModel({
         latitude: data[1],
         longitude: data[2],
@@ -66,9 +80,49 @@ server.use(cors.actual);
 
 server.pre((req, res, next) => {
   console.info(`${req.method} - ${req.url}`);
+  if(req.header('Token') === config.panel.token)
   return next();
+  else
+  return "Error: Not authenticated";
+});
+/*
+PUT /device/:id
+- GET /device/:id/info
+- GET /device/:id/path/from/:start_date/to/:end_date
+- DELETE /device/:id
+*/
+
+server.put('/device/:id', (req, res, next) =>
+{
+  const deviceId = req.params.id;
 });
 
+server.get('/device/:id/info', (req, res, next) => {
+  const deviceId = req.params.id;
+});
+
+server.get('/device/:id/path/from/:startDate/to/:endDate', (req, res, next) =>
+{
+  const deviceId = req.params.id;
+  const startDate = req.params.startDate;
+  const startDate = req.params.endDate;
+
+});
+
+server.del('/device/:id', (req, res, next) =>
+{
+  const deviceId = req.params.id;
+  GPSModel.deleteMany({ device_id: deviceId }, function (err) {
+    if (err) return handleError(err);
+    // deleted at most one tank document
+  });
+
+  //Should delete the device from the device list (which doesn't exist yet)
+  //GPSModel.deleteOne({ device_id: deviceId }, function (err) {
+   // if (err) return handleError(err);
+    // deleted at most one tank document
+  //});
+});
 server.get('/locations', (req, res, next) => {
   try {
     GPSModel.find(
@@ -92,6 +146,6 @@ server.get('/locations', (req, res, next) => {
   }
 });
 
-server.listen(port, () => {
+server.listen(config.panel.port, () => {
   console.log('%s listening at %s', server.name, server.url);
 });
