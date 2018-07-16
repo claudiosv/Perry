@@ -26,19 +26,25 @@ db.once('open', function() {
 
 client.on('connect', () => {
   console.log('connected to broker');
-  client.subscribe('gps-data-testiot/update');
+  //client.subscribe('gps-data-testiot/update');
   //Subscribe to all the topics
   //Each device has 1 unique topic
   //So fetch all devices from mongodb and subscribe
+  DeviceModel.find({},
+    function(err, device) {
+      if (err) return console.error(err);
+      client.subscribe(device.topic);
+    }
+  )
 });
 
 client.on('message', (topic, message) => {
   console.log(message.toString());
-  switch (topic) {
-    case 'gps-data-testiot/update':
+  
       let data = message.toString().split(',');
       if (data[0] != 'P') return;
-      let fluffy = new GPSModel({
+      let location = new GPSModel({
+        device_id: topic,
         latitude: data[1],
         longitude: data[2],
         speed: data[3],
@@ -46,15 +52,15 @@ client.on('message', (topic, message) => {
         altitude: data[5],
         date_added: new Date().toISOString()
       });
-      fluffy.save(function(err, fluffy) {
+      location.save(function(err, saved) {
         if (err) return console.error(err);
       });
       return () => console.log(message);
-  }
   console.log('No handler for topic %s', topic);
 });
 
 const GPSData = new mongoose.Schema({
+  device_id: String,
   latitude: Number,
   longitude: Number,
   speed: Number,
@@ -63,6 +69,11 @@ const GPSData = new mongoose.Schema({
   date_added: Date
 });
 const GPSModel = mongoose.model('people', GPSData, 'peoples1');
+
+const DeviceSchema = new mongoose.Schema({
+  topic: String
+});
+const DeviceModel = mongoose.model('device', GPSData, 'devices');
 
 const server = restify.createServer({
   name: 'restify headstart'
@@ -85,44 +96,72 @@ server.pre((req, res, next) => {
   else
   return "Error: Not authenticated";
 });
-/*
-PUT /device/:id
-- GET /device/:id/info
-- GET /device/:id/path/from/:start_date/to/:end_date
-- DELETE /device/:id
-*/
 
 server.put('/device/:id', (req, res, next) =>
 {
   const deviceId = req.params.id;
+  let newDevice = new DeviceModel({
+    topic: deviceId
+  });
+
+  newDevice.save((err, saved) => {
+    if(err) console.log(err);
+  });
+
+  return next();
 });
 
 server.get('/device/:id/info', (req, res, next) => {
   const deviceId = req.params.id;
+
+  DeviceModel.findOne({ deviceId }, (err, device) => {
+    if(err) console.log(err);
+    res.send(200, device);
+  });
+
+  return next();
 });
 
 server.get('/device/:id/path/from/:startDate/to/:endDate', (req, res, next) =>
 {
   const deviceId = req.params.id;
   const startDate = req.params.startDate;
-  const startDate = req.params.endDate;
+  const endDate = req.params.endDate;
 
+  try {
+    GPSModel.find(
+      { device_id: deviceId,
+        date_added: { $gt: startDate, $lt: endDate }},
+        function(err, locations) {
+        if (err) return console.error(err);
+        res.send(200, locations);
+      }
+    );
+
+    return next();
+  } catch (error) {
+    return next(new errors.NotFoundError(error));
+  }
+
+  return next();
 });
 
 server.del('/device/:id', (req, res, next) =>
 {
   const deviceId = req.params.id;
   GPSModel.deleteMany({ device_id: deviceId }, function (err) {
-    if (err) return handleError(err);
+    if (err) return console.log(err);
     // deleted at most one tank document
   });
 
   //Should delete the device from the device list (which doesn't exist yet)
-  //GPSModel.deleteOne({ device_id: deviceId }, function (err) {
-   // if (err) return handleError(err);
+  DeviceModel.deleteOne({ device_id: deviceId }, function (err) {
+    if (err) return console.log(err);
     // deleted at most one tank document
-  //});
+  });
+  return next();
 });
+
 server.get('/locations', (req, res, next) => {
   try {
     GPSModel.find(
