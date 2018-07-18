@@ -64,7 +64,7 @@ const GPSData = new mongoose.Schema({
   altitude: Number,
   date_added: Date
 });
-const GPSModel = mongoose.model('people', GPSData, 'peoples1');
+const GPSModel = mongoose.model('location', GPSData, 'paths');
 
 const DeviceSchema = new mongoose.Schema({
   topic: String
@@ -72,7 +72,7 @@ const DeviceSchema = new mongoose.Schema({
 const DeviceModel = mongoose.model('device', DeviceSchema, 'devices');
 
 const server = restify.createServer({
-  name: 'restify headstart'
+  name: 'perry'
 });
 
 const cors = corsMiddleware({
@@ -102,6 +102,7 @@ server.put('/device/:id', (req, res, next) =>
 
   newDevice.save((err, saved) => {
     if(err) console.log(err);
+    res.send(200, saved);
   });
 
   return next();
