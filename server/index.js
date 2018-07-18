@@ -1,58 +1,68 @@
 "use strict";
-const restify = require('restify');
-const errors = require('restify-errors');
-const corsMiddleware = require('restify-cors-middleware');
-const mongoose = require('mongoose');
-const format = require('string-format')
-const mqtt = require('mqtt');
+const restify = require("restify");
+const errors = require("restify-errors");
+const corsMiddleware = require("restify-cors-middleware");
+const mongoose = require("mongoose");
+const format = require("string-format");
+const mqtt = require("mqtt");
 
-const fs = require('fs');
-const toml = require('toml');
+const fs = require("fs");
+const toml = require("toml");
 try {
-  const config = toml.parse(fs.readFileSync('./config.toml', 'utf-8'));
+  const config = toml.parse(fs.readFileSync("./config.toml", "utf-8"));
 } catch (e) {
-  console.error("Parsing error on line " + e.line + ", column " + e.column +
-    ": " + e.message);
+  console.error(
+    "Parsing error on line " +
+      e.line +
+      ", column " +
+      e.column +
+      ": " +
+      e.message
+  );
 }
 
-
-const client = mqtt.connect('mqtt://{hostname}'.format(config.mqtt), { username: config.mqtt.username, password: config.mqtt.password });
-mongoose.connect('mongodb://{username}:{password}@{hostname}:{port}/{database}'.format(config.mongodb));
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', function() {
-  console.log('Connected to mongodb');
-});
-
-client.on('connect', () => {
-  console.log('connected to broker');
-  DeviceModel.find({},
-    function(err, device) {
-      if (err) return console.error(err);
-      client.subscribe(device.topic);
-    }
+const client = mqtt.connect(
+  "mqtt://{hostname}".format(config.mqtt),
+  { username: config.mqtt.username, password: config.mqtt.password }
+);
+mongoose.connect(
+  "mongodb://{username}:{password}@{hostname}:{port}/{database}".format(
+    config.mongodb
   )
+);
+const db = mongoose.connection;
+db.on("error", console.error.bind(console, "connection error:"));
+db.once("open", function() {
+  console.log("Connected to mongodb");
 });
 
-client.on('message', (topic, message) => {
+client.on("connect", () => {
+  console.log("connected to broker");
+  DeviceModel.find({}, function(err, device) {
+    if (err) return console.error(err);
+    client.subscribe(device.topic);
+  });
+});
+
+client.on("message", (topic, message) => {
   console.log(message.toString());
-  
-      let data = message.toString().split(',');
-      if (data[0] != 'P') return;
-      let location = new GPSModel({
-        device_id: topic,
-        latitude: data[1],
-        longitude: data[2],
-        speed: data[3],
-        heading: data[4],
-        altitude: data[5],
-        date_added: new Date().toISOString()
-      });
-      location.save(function(err, saved) {
-        if (err) return console.error(err);
-      });
-      return () => console.log(message);
-  console.log('No handler for topic %s', topic);
+
+  let data = message.toString().split(",");
+  if (data[0] != "P") return;
+  let location = new GPSModel({
+    device_id: topic,
+    latitude: data[1],
+    longitude: data[2],
+    speed: data[3],
+    heading: data[4],
+    altitude: data[5],
+    date_added: new Date().toISOString()
+  });
+  location.save(function(err, saved) {
+    if (err) return console.error(err);
+  });
+  return () => console.log(message);
+  console.log("No handler for topic %s", topic);
 });
 
 const GPSData = new mongoose.Schema({
@@ -64,20 +74,20 @@ const GPSData = new mongoose.Schema({
   altitude: Number,
   date_added: Date
 });
-const GPSModel = mongoose.model('location', GPSData, 'paths');
+const GPSModel = mongoose.model("location", GPSData, "paths");
 
 const DeviceSchema = new mongoose.Schema({
   topic: String
 });
-const DeviceModel = mongoose.model('device', DeviceSchema, 'devices');
+const DeviceModel = mongoose.model("device", DeviceSchema, "devices");
 
 const server = restify.createServer({
-  name: 'perry'
+  name: "perry"
 });
 
 const cors = corsMiddleware({
-  origins: ['*'],
-  allowHeaders: ['X-App-Version'],
+  origins: ["*"],
+  allowHeaders: ["X-App-Version"],
   exposeHeaders: []
 });
 
@@ -87,56 +97,54 @@ server.use(cors.actual);
 
 server.pre((req, res, next) => {
   console.info(`${req.method} - ${req.url}`);
-  if(req.header('Token') === config.panel.token)
-  return next();
-  else
-  return "Error: Not authenticated";
+  if (req.header("Token") === config.panel.token) return next();
+  else return "Error: Not authenticated";
 });
 
-server.put('/device/:id', (req, res, next) =>
-{
+server.put("/device/:id", (req, res, next) => {
   const deviceId = req.params.id;
   let newDevice = new DeviceModel({
     topic: deviceId
   });
 
   newDevice.save((err, saved) => {
-    if(err) console.log(err);
+    if (err) console.log(err);
     res.send(200, saved);
   });
 
   return next();
 });
 
-server.get('/device/:id/info', (req, res, next) => {
+server.get("/device/:id/info", (req, res, next) => {
   const deviceId = req.params.id;
 
   DeviceModel.findOne({ deviceId }, (err, device) => {
-    if(err) console.log(err);
+    if (err) console.log(err);
     res.send(200, device);
   });
 
   return next();
 });
 
-server.get('/device/:id/path/from/:startDate/to/:endDate', (req, res, next) =>
-{
+server.get("/device/:id/path/from/:startDate/to/:endDate", (req, res, next) => {
   const deviceId = req.params.id;
   const startDate = req.params.startDate;
   const endDate = req.params.endDate;
 
   try {
     GPSModel.find(
-      { device_id: deviceId,
-        date_added: { $gt: startDate, $lt: endDate }},
-        null, 
-        {
-          limit: 10,
-          sort: {
-            date_added: -1 //Sort by Date Added DESC
-          }
-        },
-        function(err, locations) {
+      {
+        device_id: deviceId,
+        date_added: { $gt: startDate, $lt: endDate }
+      },
+      null,
+      {
+        limit: 10,
+        sort: {
+          date_added: -1 //Sort by Date Added DESC
+        }
+      },
+      function(err, locations) {
         if (err) return console.error(err);
         res.send(200, locations);
       }
@@ -150,16 +158,15 @@ server.get('/device/:id/path/from/:startDate/to/:endDate', (req, res, next) =>
   return next();
 });
 
-server.del('/device/:id', (req, res, next) =>
-{
+server.del("/device/:id", (req, res, next) => {
   const deviceId = req.params.id;
-  GPSModel.deleteMany({ device_id: deviceId }, function (err) {
+  GPSModel.deleteMany({ device_id: deviceId }, function(err) {
     if (err) return console.log(err);
     // deleted at most one tank document
   });
 
   //Should delete the device from the device list (which doesn't exist yet)
-  DeviceModel.deleteOne({ device_id: deviceId }, function (err) {
+  DeviceModel.deleteOne({ device_id: deviceId }, function(err) {
     if (err) return console.log(err);
     // deleted at most one tank document
   });
@@ -167,5 +174,5 @@ server.del('/device/:id', (req, res, next) =>
 });
 
 server.listen(config.panel.port, () => {
-  console.log('%s listening at %s', server.name, server.url);
+  console.log("%s listening at %s", server.name, server.url);
 });
