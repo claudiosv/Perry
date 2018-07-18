@@ -45,8 +45,6 @@ client.on("connect", () => {
 });
 
 client.on("message", (topic, message) => {
-  console.log(message.toString());
-
   let data = message.toString().split(",");
   if (data[0] != "P") return;
   let location = new GPSModel({
@@ -61,8 +59,7 @@ client.on("message", (topic, message) => {
   location.save(function(err, saved) {
     if (err) return console.error(err);
   });
-  return () => console.log(message);
-  console.log("No handler for topic %s", topic);
+  return () => console.log(message.toString());
 });
 
 const GPSData = new mongoose.Schema({

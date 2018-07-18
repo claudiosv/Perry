@@ -22,17 +22,15 @@
 
 #define FONA_PASSWORD "" // Password used by cell data service (leave blank if unused).
 
-#define AIO_SERVER "io.adafruit.com" // Adafruit IO server name.
+#define MQTT_HOSTNAME "io.adafruit.com" // MQTT server hostname
 
-#define AIO_SERVERPORT 1883 // Adafruit IO port.
+#define MQTT_PORT 1883 // MQTT server port.
 
-#define AIO_USERNAME "claudios" // Adafruit IO username (see http://accounts.adafruit.com/).
+#define MQTT_USERNAME "" // MQTT server username
 
-#define AIO_KEY "cb323da4b0a647d7974cfe7910366b60" // Adafruit IO key (see settings page at: https://io.adafruit.com/settings).
+#define MQTT_PASSWORD "" // MQTT server password
 
-#define PATH_FEED_NAME "gps-path" // Name of the AIO feed to log regular location updates.
-
-#define GOOD_CANDY_FEED_NAME "treat-good-candy" // Name of the AIO feed to log good candy locations.
+#define MQTT_TOPIC "gps-path" // Device identifier / MQTT topic
 
 #define MAX_TX_FAILURES 3 // Maximum number of publish failures in a row before resetting the whole sketch.
 
@@ -40,12 +38,12 @@ SoftwareSerial fonaSS = SoftwareSerial(FONA_TX, FONA_RX); // FONA software seria
 
 Adafruit_FONA fona = Adafruit_FONA(FONA_RST); // FONA library connection.
 
-const char MQTT_SERVER[] PROGMEM = AIO_SERVER;              // MQTT server, client, username, password.
-const char MQTT_CLIENTID[] PROGMEM = __TIME__ AIO_USERNAME; // (stored in flash memory)
-const char MQTT_USERNAME[] PROGMEM = AIO_USERNAME;
-const char MQTT_PASSWORD[] PROGMEM = AIO_KEY;
+const char MQTT_HOSTNAME[] PROGMEM = MQTT_HOSTNAME;              // MQTT server, client, username, password.
+const char MQTT_CLIENTID[] PROGMEM = __TIME__ MQTT_USERNAME; // (stored in flash memory)
+const char MQTT_USERNAME[] PROGMEM = MQTT_USERNAME;
+const char MQTT_PASSWORD[] PROGMEM = MQTT_PASSWORD;
 
-Adafruit_MQTT_FONA mqtt(&fona, MQTT_SERVER, AIO_SERVERPORT, // MQTT connection.
+Adafruit_MQTT_FONA mqtt(&fona, MQTT_SERVER, MQTT_PORT, // MQTT connection.
                         MQTT_CLIENTID, MQTT_USERNAME,
                         MQTT_PASSWORD);
 
@@ -54,7 +52,8 @@ uint32_t logCounter = 0; // Counter until next location log is recorded.
 
 // Note that the path ends in '/csv', this means a comma separated set of values
 // can be pushed to the feed, including location data like lat, long, altitude.
-const char PATH_FEED[] PROGMEM = AIO_USERNAME "/feeds/" PATH_FEED_NAME "/csv";
+//const char PATH_FEED[] PROGMEM = AIO_USERNAME "/feeds/" PATH_FEED_NAME "/csv";
+const char PATH_FEED[] PROGMEM = MQTT_TOPIC;
 Adafruit_MQTT_Publish path = Adafruit_MQTT_Publish(&mqtt, PATH_FEED);
 
 void setup()
@@ -207,7 +206,7 @@ void logLocation(float latitude, float longitude, float speed_kph, float heading
     int index = 0;
 
     // Start with '0,' to set the feed value.  The value isn't really used so 0 is used as a placeholder.
-    sendBuffer[index++] = '0';
+    sendBuffer[index++] = 'P';
     sendBuffer[index++] = ',';
 
     // Now set latitude, longitude, altitude separated by commas.
