@@ -26,10 +26,6 @@ db.once('open', function() {
 
 client.on('connect', () => {
   console.log('connected to broker');
-  //client.subscribe('gps-data-testiot/update');
-  //Subscribe to all the topics
-  //Each device has 1 unique topic
-  //So fetch all devices from mongodb and subscribe
   DeviceModel.find({},
     function(err, device) {
       if (err) return console.error(err);
@@ -73,7 +69,7 @@ const GPSModel = mongoose.model('people', GPSData, 'peoples1');
 const DeviceSchema = new mongoose.Schema({
   topic: String
 });
-const DeviceModel = mongoose.model('device', GPSData, 'devices');
+const DeviceModel = mongoose.model('device', DeviceSchema, 'devices');
 
 const server = restify.createServer({
   name: 'restify headstart'
@@ -132,6 +128,13 @@ server.get('/device/:id/path/from/:startDate/to/:endDate', (req, res, next) =>
     GPSModel.find(
       { device_id: deviceId,
         date_added: { $gt: startDate, $lt: endDate }},
+        null, 
+        {
+          limit: 10,
+          sort: {
+            date_added: -1 //Sort by Date Added DESC
+          }
+        },
         function(err, locations) {
         if (err) return console.error(err);
         res.send(200, locations);
@@ -160,29 +163,6 @@ server.del('/device/:id', (req, res, next) =>
     // deleted at most one tank document
   });
   return next();
-});
-
-server.get('/locations', (req, res, next) => {
-  try {
-    GPSModel.find(
-      {},
-      null,
-      {
-        limit: 10,
-        sort: {
-          date_added: -1 //Sort by Date Added DESC
-        }
-      },
-      function(err, locations) {
-        if (err) return console.error(err);
-        res.send(200, locations);
-      }
-    ).sort;
-
-    return next();
-  } catch (error) {
-    return next(new errors.NotFoundError(error));
-  }
 });
 
 server.listen(config.panel.port, () => {
