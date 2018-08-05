@@ -11,14 +11,15 @@ import ListItem from "@material-ui/core/ListItem";
 import ListItemIcon from "@material-ui/core/ListItemIcon";
 import ListItemText from "@material-ui/core/ListItemText";
 import SettingsIcon from "@material-ui/icons/Settings";
-import DraftsIcon from "@material-ui/icons/Drafts";
-
+import ListSubheader from "@material-ui/core/ListSubheader";
+import MapComponent from "./MapComponent";
+import DevicesList from "./DevicesList";
 const drawerWidth = 240;
 
 const styles = theme => ({
   root: {
     flexGrow: 1,
-    height: 430,
+    //height: 100,
     zIndex: 1,
     overflow: "hidden",
     position: "relative",
@@ -34,7 +35,7 @@ const styles = theme => ({
   content: {
     flexGrow: 1,
     backgroundColor: theme.palette.background.default,
-    padding: theme.spacing.unit * 3,
+    //padding: theme.spacing.unit * 3,
     minWidth: 0 // So the Typography noWrap works
   },
   toolbar: theme.mixins.toolbar
@@ -66,28 +67,18 @@ function ClippedDrawer(props) {
             </ListItemIcon>
             <ListItemText primary="Settings" />
           </ListItem>
-          <ListItem button>
-            <ListItemIcon>
-              <DraftsIcon />
-            </ListItemIcon>
-            <ListItemText primary="Drafts" />
-          </ListItem>
         </List>
         <Divider />
-        <List component="nav">
-          <ListItem button>
-            <ListItemText primary="Trash" />
-          </ListItem>
-          <ListItem button component="a" href="#simple-list">
-            <ListItemText primary="Spam" />
-          </ListItem>
+        <List
+          component="nav"
+          subheader={<ListSubheader component="div">Devices</ListSubheader>}
+        >
+          <DevicesList />
         </List>
       </Drawer>
       <main className={classes.content}>
         <div className={classes.toolbar} />
-        <Typography noWrap>
-          {"You think water moves fast? You should see ice."}
-        </Typography>
+        <MapComponent />
       </main>
     </div>
   );

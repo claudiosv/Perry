@@ -1,8 +1,7 @@
 import React, { Component } from "react";
-import NavBar from "./NavBar";
 import teal from "@material-ui/core/colors/teal";
 import { MuiThemeProvider, createMuiTheme } from "@material-ui/core/styles";
-import ClippedDrawar from "./ClippedDrawar";
+import ClippedDrawar from "./ClippedDrawer";
 
 const theme = createMuiTheme({
   palette: {

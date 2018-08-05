@@ -1,6 +1,6 @@
 # Perry configuration file
 [mongodb]
-user = "test"
+username = "test"
 password = "testtest1"
 hostname = "ds255958.mlab.com"
 port = 55958

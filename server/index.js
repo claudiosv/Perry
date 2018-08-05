@@ -5,11 +5,24 @@ const corsMiddleware = require("restify-cors-middleware");
 const mongoose = require("mongoose");
 const format = require("string-format");
 const mqtt = require("mqtt");
-
 const fs = require("fs");
 const toml = require("toml");
+const signale = require("signale");
+
+// signale.success("Operation successful");
+// signale.debug("Hello", "from", "L59");
+// signale.pending("Write release notes for %s", "1.2.0");
+// signale.fatal(new Error("Unable to acquire lock"));
+// signale.watch("Recursively watching build directory...");
+// signale.complete({
+//   prefix: "[task]",
+//   message: "Fix issue #59",
+//   suffix: "(@klauscfhq)"
+// });
+let config = {};
+format.extend(String.prototype, {});
 try {
-  const config = toml.parse(fs.readFileSync("./config.toml", "utf-8"));
+  config = toml.parse(fs.readFileSync("./config.toml", "utf-8"));
 } catch (e) {
   console.error(
     "Parsing error on line " +
@@ -25,6 +38,7 @@ const client = mqtt.connect(
   "mqtt://{hostname}".format(config.mqtt),
   { username: config.mqtt.username, password: config.mqtt.password }
 );
+
 mongoose.connect(
   "mongodb://{username}:{password}@{hostname}:{port}/{database}".format(
     config.mongodb
@@ -40,7 +54,8 @@ client.on("connect", () => {
   console.log("connected to broker");
   DeviceModel.find({}, function(err, device) {
     if (err) return console.error(err);
-    client.subscribe(device.topic);
+    signale.debug("Found device: ", device.topic);
+    //client.subscribe(device.topic);
   });
 });
 
@@ -83,9 +98,9 @@ const server = restify.createServer({
 });
 
 const cors = corsMiddleware({
-  origins: ["*"],
-  allowHeaders: ["X-App-Version"],
-  exposeHeaders: []
+  origins: ["*"]
+  //allowHeaders: ["X-App-Version"],
+  //exposeHeaders: []
 });
 
 server.use(restify.plugins.bodyParser());
@@ -95,7 +110,7 @@ server.use(cors.actual);
 server.pre((req, res, next) => {
   console.info(`${req.method} - ${req.url}`);
   if (req.header("Token") === config.panel.token) return next();
-  else return "Error: Not authenticated";
+  else res.send(new errors.BadRequestError("meh"));
 });
 
 server.put("/device/:id", (req, res, next) => {
@@ -118,6 +133,17 @@ server.get("/device/:id/info", (req, res, next) => {
   DeviceModel.findOne({ deviceId }, (err, device) => {
     if (err) console.log(err);
     res.send(200, device);
+  });
+
+  return next();
+});
+
+server.get("/devices", (req, res, next) => {
+  DeviceModel.find({}, function(err, device) {
+    if (err) return console.error(err);
+    signale.debug("Found device: ", device.topic);
+    res.send(device);
+    //client.subscribe(device.topic);
   });
 
   return next();
