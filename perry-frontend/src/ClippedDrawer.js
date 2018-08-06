@@ -41,7 +41,47 @@ const styles = theme => ({
   toolbar: theme.mixins.toolbar
 });
 
-function ClippedDrawer(props) {
+export default class ClippedDrawer extends React.Component {
+  constructor() {
+    super();
+    this.state = {};
+    this.handleClick = this.handleClick.bind(this);
+  }
+componentDidMount() {
+  fetch("http://localhost:3000/devices", {
+    headers: {
+      Token: "jnjrineifnajen"
+    }
+  })
+    .then(results => {
+      return results.json();
+    })
+    .then(data => {
+      let devices = data.map(device => {
+        return (
+          <ListItem
+            button
+            key={device.topic}
+            onClick={e => this.handleClick(device.topic, e)}
+          >
+            <ListItemIcon>
+              <GpsFixedIcon />
+            </ListItemIcon>
+            <ListItemText primary={device.topic} />
+          </ListItem>
+        );
+      });
+
+      this.setState({ devices: devices });
+      console.log("state", this.state);
+    });
+}
+
+handleClick(id, e) {
+  console.log("I've been clicked woo!", id, e);
+}
+
+render(props) {
   const { classes } = props;
 
   return (
@@ -73,7 +113,7 @@ function ClippedDrawer(props) {
           component="nav"
           subheader={<ListSubheader component="div">Devices</ListSubheader>}
         >
-          <DevicesList />
+          <div>{this.state.devices}</div>
         </List>
       </Drawer>
       <main className={classes.content}>
@@ -83,7 +123,7 @@ function ClippedDrawer(props) {
     </div>
   );
 }
-
+}
 ClippedDrawer.propTypes = {
   classes: PropTypes.object.isRequired
 };

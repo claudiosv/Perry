@@ -2,5 +2,6 @@
     "[javascript]": {
         "editor.formatOnSave": true
     },
-    "eslint.enable": false
+    "eslint.enable": false,
+    "python.jediEnabled": false
 }
