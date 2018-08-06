@@ -44,7 +44,11 @@ const styles = theme => ({
 export default class ClippedDrawer extends React.Component {
   constructor() {
     super();
-    this.state = {};
+    this.state = {markers: [
+      { key: "marker1", position: [51.5, -0.1], children: "My first popup" },
+      { key: "marker2", position: [51.51, -0.1], children: "My second popup" },
+      { key: "marker3", position: [51.49, -0.05], children: "My third popup" }
+    ]};
     this.handleClick = this.handleClick.bind(this);
   }
 componentDidMount() {
@@ -118,7 +122,7 @@ render(props) {
       </Drawer>
       <main className={classes.content}>
         <div className={classes.toolbar} />
-        <MapComponent />
+        <MapComponent path={this.state.path} />
       </main>
     </div>
   );

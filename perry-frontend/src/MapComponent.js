@@ -21,14 +21,9 @@ export default class CustomComponent extends Component {
     zoom: 13
   };
 
-  render() {
+  render(path) {
     const center = [this.state.lat, this.state.lng];
 
-    const markers = [
-      { key: "marker1", position: [51.5, -0.1], children: "My first popup" },
-      { key: "marker2", position: [51.51, -0.1], children: "My second popup" },
-      { key: "marker3", position: [51.49, -0.05], children: "My third popup" }
-    ];
     return (
       <Map center={center} zoom={this.state.zoom} id="mapid">
         <TileLayer
