@@ -1,5 +1,5 @@
-import React, { Component } from "react";
-import { Map, TileLayer, Marker, Popup } from "react-leaflet";
+import React, { Component } from 'react';
+import { Map, TileLayer, Marker, Popup } from 'react-leaflet';
 
 const MyPopupMarker = ({ children, position }) => (
   <Marker position={position}>
@@ -8,17 +8,15 @@ const MyPopupMarker = ({ children, position }) => (
 );
 
 const MyMarkersList = ({ markers }) => {
-  const items = markers.map(({ key, ...props }) => (
-    <MyPopupMarker key={key} {...props} />
-  ));
-  return <div style={{ display: "none" }}>{items}</div>;
+  const items = markers.map(({ key, ...props }) => <MyPopupMarker key={key} {...props} />);
+  return <div style={{ display: 'none' }}>{items}</div>;
 };
 
 export default class MapComponent extends Component {
   state = {
     lat: 51.505,
     lng: -0.09,
-    zoom: 13
+    zoom: 13,
   };
   // constructor(props) {
   // super(props);
@@ -27,8 +25,15 @@ export default class MapComponent extends Component {
   render() {
     const center = [this.state.lat, this.state.lng];
     console.log(this.props);
+    // TODO: Make 64px a prop so that this can responsively render
+    const { offsetTop } = this.props;
     return (
-      <Map center={center} zoom={this.state.zoom} id="mapid">
+      <Map
+        center={center}
+        zoom={this.state.zoom}
+        id="mapid"
+        style={{ height: `calc(100% - ${offsetTop}px)` }}
+      >
         <TileLayer
           attribution="&amp;copy <a href=&quot;http://osm.org/copyright&quot;>OpenStreetMap</a> contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
