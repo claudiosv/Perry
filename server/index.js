@@ -149,6 +149,34 @@ server.get("/devices", (req, res, next) => {
   return next();
 });
 
+server.get("/device/:id/path", (req, res, next) => {
+  signale.debug("Hit endpoint");
+  const deviceId = req.params.id;
+
+  try {
+    GPSModel.find(
+      {
+        device_id: deviceId
+      },
+      null,
+      {
+        limit: 10,
+        sort: {
+          date_added: -1 //Sort by Date Added DESC
+        }
+      },
+      function(err, locations) {
+        if (err) return console.error(err);
+        res.send(200, locations);
+      }
+    );
+
+    return next();
+  } catch (error) {
+    return next(new errors.NotFoundError(error));
+  }
+});
+
 server.get("/device/:id/path/from/:startDate/to/:endDate", (req, res, next) => {
   const deviceId = req.params.id;
   const startDate = req.params.startDate;

@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import teal from "@material-ui/core/colors/teal";
 import { MuiThemeProvider, createMuiTheme } from "@material-ui/core/styles";
-import ClippedDrawar from "./ClippedDrawer";
+import ClippedDrawer from "./ClippedDrawer";
 
 const theme = createMuiTheme({
   palette: {
@@ -14,7 +14,7 @@ class App extends Component {
     return (
       <MuiThemeProvider theme={theme}>
         <div>
-          <ClippedDrawar />
+          <ClippedDrawer />
         </div>
       </MuiThemeProvider>
     );
