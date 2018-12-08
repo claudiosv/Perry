@@ -14,6 +14,7 @@
 
 
 // Configuration (you need to change at least the APN and AIO username & key values):
+#define PERRY_DEBUG 0
 
 #define LED_PIN              6   // Pin connected to an LED that flashes the status of the project.
 
@@ -108,14 +109,21 @@ void logLocation(float latitude, float longitude, float speed_kph, float heading
   dtostrf(altitude, 2, 6, &sendBuffer[index]);
 
   // Finally publish the string to the feed.
+#if PERRY_DEBUG
   Serial.print(F("Publishing: "));
   Serial.println(sendBuffer);
+#endif
+
   if (!publishFeed.publish(sendBuffer)) {
+    #if PERRY_DEBUG
     Serial.println(F("Publish failed!"));
+    #endif
     txFailures++;
   }
   else {
+    #if PERRY_DEBUG
     Serial.println(F("Publish succeeded!"));
+    #endif
     txFailures = 0;
   }
 }
@@ -123,29 +131,35 @@ void logLocation(float latitude, float longitude, float speed_kph, float heading
 void setup() {
   // Initialize serial output.
   Serial.begin(115200);
+  #if PERRY_DEBUG
   Serial.println(F("Perry"));
-
+#endif
   // Initialize LED and button.
   pinMode(LED_PIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   digitalWrite(LED_PIN, LOW);
 
   // Initialize the FONA module
+  #if PERRY_DEBUG
   Serial.println(F("Initializing FONA....(may take 10 seconds)"));
+  #endif
   fonaSS.begin(4800);
   if (!fona.begin(fonaSS)) {
     halt(F("Couldn't find FONA"));
   }
+  #if PERRY_DEBUG
   fonaSS.println("AT+CMEE=2");
   Serial.println(F("FONA is OK"));
-
+#endif
   // Use the watchdog to simplify retry logic and make things more robust.
   // Enable this after FONA is intialized because FONA init takes about 8-9 seconds.
   Watchdog.enable(8000);
   Watchdog.reset();
 
   // Wait for FONA to connect to cell network (up to 8 seconds, then watchdog reset).
+  #if PERRY_DEBUG
   Serial.println(F("Checking for network..."));
+  #endif
   while (fona.getNetworkStatus() != 1) {
     delay(500);
   }
@@ -158,15 +172,21 @@ void setup() {
   fona.setGPRSNetworkSettings(F(FONA_APN), F(FONA_USERNAME), F(FONA_PASSWORD));
   delay(2000);
   Watchdog.reset();
+  #if PERRY_DEBUG
   Serial.println(F("Disabling GPRS"));
+  #endif
   fona.enableGPRS(false);
   delay(2000);
   Watchdog.reset();
+  #if PERRY_DEBUG
   Serial.println(F("Enabling GPRS"));
+  #endif
   if (!fona.enableGPRS(true)) {
     halt(F("Failed to turn GPRS on, resetting..."));
   }
+  #if PERRY_DEBUG
   Serial.println(F("Connected to Cellular!"));
+  #endif
 
   // Wait a little bit to stabilize the connection.
   Watchdog.reset();
@@ -175,10 +195,14 @@ void setup() {
   // Now make the MQTT connection.
   int8_t ret = mqtt.connect();
   if (ret != 0) {
+    #if PERRY_DEBUG
     Serial.println(mqtt.connectErrorString(ret));
+    #endif
     halt(F("MQTT connection failed, resetting..."));
   }
+  #if PERRY_DEBUG
   Serial.println(F("MQTT Connected!"));
+  #endif
   // Configure timer0 compare interrupt to run and decrease the log counter every millisecond.
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
@@ -191,7 +215,9 @@ void loop() {
   // Reset everything if disconnected or too many transmit failures occured in a row.
   if (!fona.TCPconnected() || (txFailures >= MAX_TX_FAILURES)) {
     //    halt(F("Connection lost, resetting..."));
+    #if PERRY_DEBUG
     Serial.println(F("Connection lost"));
+    #endif
   }
 
   // Grab a GPS reading.
