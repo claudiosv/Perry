@@ -9,16 +9,6 @@ const fs = require("fs");
 const toml = require("toml");
 const signale = require("signale");
 
-// signale.success("Operation successful");
-// signale.debug("Hello", "from", "L59");
-// signale.pending("Write release notes for %s", "1.2.0");
-// signale.fatal(new Error("Unable to acquire lock"));
-// signale.watch("Recursively watching build directory...");
-// signale.complete({
-//   prefix: "[task]",
-//   message: "Fix issue #59",
-//   suffix: "(@klauscfhq)"
-// });
 let config = {};
 format.extend(String.prototype, {});
 try {
@@ -52,6 +42,8 @@ db.once("open", function() {
 
 client.on("connect", () => {
   console.log("connected to broker");
+  client.subscribe("arduino-vespa");
+  signale.log("Connected to arduino-vespa");
   DeviceModel.find({}, function(err, device) {
     if (err) return console.error(err);
     signale.debug("Found device: ", device.topic);
@@ -60,6 +52,7 @@ client.on("connect", () => {
 });
 
 client.on("message", (topic, message) => {
+  signale.debug("Message ", topic, message.toString());
   let data = message.toString().split(",");
   if (data[0] != "P") return;
   let location = new GPSModel({
