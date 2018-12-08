@@ -7,18 +7,19 @@
 // Released under a MIT license:
 // https://opensource.org/licenses/MIT
 #include <SoftwareSerial.h>
-#include "Adafruit_SleepyDog.h"
+#include "LowPower.h"
+//#include "Adafruit_SleepyDog.h"
 #include "Adafruit_FONA.h"
 #include "Adafruit_MQTT.h"
 #include "Adafruit_MQTT_FONA.h"
 
 
 // Configuration (you need to change at least the APN and AIO username & key values):
-#define PERRY_DEBUG 0
+#define PERRY_DEBUG          1
 
 #define LED_PIN              6   // Pin connected to an LED that flashes the status of the project.
 
-#define LOGGING_PERIOD_SEC   1  // Seconds to wait between logging GPS locations.
+#define LOGGING_PERIOD_SEC   60  // Seconds to wait between logging GPS locations.
 
 #define FONA_RX              2   // FONA serial RX pin (pin 2 for shield).
 
@@ -54,29 +55,31 @@ Adafruit_MQTT_FONA mqtt(&fona, AIO_SERVER, AIO_SERVERPORT,   // MQTT connection.
                         AIO_USERNAME, AIO_USERNAME,
                         AIO_KEY);
 uint8_t txFailures = 0;                                       // Count of how many publish failures have occured in a row.
-uint32_t logCounter = 0;                                      // Counter until next location log is recorded.
+// uint32_t logCounter = 0;                                      // Counter until next location log is recorded.
 
 Adafruit_MQTT_Publish path = Adafruit_MQTT_Publish(&mqtt, PATH_FEED_NAME);
 
 // Halt function called when an error occurs.  Will print an error and stop execution while
 // doing a fast blink of the LED.  If the watchdog is enabled it will reset after 8 seconds.
 void halt(const __FlashStringHelper *error) {
+#if PERRY_DEBUG
   Serial.println(error);
-  while (1) {
-    digitalWrite(LED_PIN, LOW);
-    delay(100);
-    digitalWrite(LED_PIN, HIGH);
-    delay(100);
-  }
+#endif
+//  while (1) {
+//    digitalWrite(LED_PIN, LOW);
+//    delay(100);
+//    digitalWrite(LED_PIN, HIGH);
+//    delay(100);
+//  }
 }
 
 // Timer interrupt called every millisecond to keep track of when the location should be logged.
-SIGNAL(TIMER0_COMPA_vect) {
-  // Decrease the count since last location log.
-  if (logCounter > 0) {
-    logCounter--;
-  }
-}
+// SIGNAL(TIMER0_COMPA_vect) {
+//   // Decrease the count since last location log.
+//   if (logCounter > 0) {
+//     logCounter--;
+//   }
+// }
 
 // Serialize the lat, long, altitude to a CSV string that can be published to the specified feed.
 void logLocation(float latitude, float longitude, float speed_kph, float heading, float altitude, Adafruit_MQTT_Publish& publishFeed) {
@@ -115,51 +118,51 @@ void logLocation(float latitude, float longitude, float speed_kph, float heading
 #endif
 
   if (!publishFeed.publish(sendBuffer)) {
-    #if PERRY_DEBUG
+#if PERRY_DEBUG
     Serial.println(F("Publish failed!"));
-    #endif
+#endif
     txFailures++;
   }
   else {
-    #if PERRY_DEBUG
+#if PERRY_DEBUG
     Serial.println(F("Publish succeeded!"));
-    #endif
+#endif
     txFailures = 0;
   }
 }
 
 void setup() {
+#if PERRY_DEBUG
   // Initialize serial output.
   Serial.begin(115200);
-  #if PERRY_DEBUG
+
   Serial.println(F("Perry"));
 #endif
   // Initialize LED and button.
   pinMode(LED_PIN, OUTPUT);
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
   digitalWrite(LED_PIN, LOW);
 
   // Initialize the FONA module
-  #if PERRY_DEBUG
+#if PERRY_DEBUG
   Serial.println(F("Initializing FONA....(may take 10 seconds)"));
-  #endif
+#endif
   fonaSS.begin(4800);
   if (!fona.begin(fonaSS)) {
     halt(F("Couldn't find FONA"));
   }
-  #if PERRY_DEBUG
+#if PERRY_DEBUG
   fonaSS.println("AT+CMEE=2");
   Serial.println(F("FONA is OK"));
 #endif
   // Use the watchdog to simplify retry logic and make things more robust.
   // Enable this after FONA is intialized because FONA init takes about 8-9 seconds.
-  Watchdog.enable(8000);
-  Watchdog.reset();
+//  Watchdog.enable(8000);
+//  Watchdog.reset();
 
   // Wait for FONA to connect to cell network (up to 8 seconds, then watchdog reset).
-  #if PERRY_DEBUG
+#if PERRY_DEBUG
   Serial.println(F("Checking for network..."));
-  #endif
+#endif
   while (fona.getNetworkStatus() != 1) {
     delay(500);
   }
@@ -168,56 +171,56 @@ void setup() {
   fona.enableGPS(true);
 
   // Start the GPRS data connection.
-  Watchdog.reset();
+//  Watchdog.reset();
   fona.setGPRSNetworkSettings(F(FONA_APN), F(FONA_USERNAME), F(FONA_PASSWORD));
   delay(2000);
-  Watchdog.reset();
-  #if PERRY_DEBUG
+//  Watchdog.reset();
+#if PERRY_DEBUG
   Serial.println(F("Disabling GPRS"));
-  #endif
+#endif
   fona.enableGPRS(false);
   delay(2000);
-  Watchdog.reset();
-  #if PERRY_DEBUG
+//  Watchdog.reset();
+#if PERRY_DEBUG
   Serial.println(F("Enabling GPRS"));
-  #endif
+#endif
   if (!fona.enableGPRS(true)) {
     halt(F("Failed to turn GPRS on, resetting..."));
   }
-  #if PERRY_DEBUG
+#if PERRY_DEBUG
   Serial.println(F("Connected to Cellular!"));
-  #endif
+#endif
 
   // Wait a little bit to stabilize the connection.
-  Watchdog.reset();
+//  Watchdog.reset();
   delay(3000);
 
   // Now make the MQTT connection.
   int8_t ret = mqtt.connect();
   if (ret != 0) {
-    #if PERRY_DEBUG
+#if PERRY_DEBUG
     Serial.println(mqtt.connectErrorString(ret));
-    #endif
+#endif
     halt(F("MQTT connection failed, resetting..."));
   }
-  #if PERRY_DEBUG
+#if PERRY_DEBUG
   Serial.println(F("MQTT Connected!"));
-  #endif
+#endif
   // Configure timer0 compare interrupt to run and decrease the log counter every millisecond.
-  OCR0A = 0xAF;
-  TIMSK0 |= _BV(OCIE0A);
+  //OCR0A = 0xAF;
+  //TIMSK0 |= _BV(OCIE0A);
 }
 
 void loop() {
   // Watchdog reset at start of loop--make sure everything below takes less than 8 seconds in normal operation!
-  Watchdog.reset();
+//  Watchdog.reset();
 
   // Reset everything if disconnected or too many transmit failures occured in a row.
   if (!fona.TCPconnected() || (txFailures >= MAX_TX_FAILURES)) {
-    //    halt(F("Connection lost, resetting..."));
-    #if PERRY_DEBUG
+    halt(F("Connection lost, resetting..."));
+#if PERRY_DEBUG
     Serial.println(F("Connection lost"));
-    #endif
+#endif
   }
 
   // Grab a GPS reading.
@@ -225,19 +228,37 @@ void loop() {
   bool gpsFix = fona.getGPS(&latitude, &longitude, &speed_kph, &heading, &altitude);
 
   // Light the LED solid if there's a GPS fix, otherwise flash it on and off once a second.
-  if (gpsFix) {
-    digitalWrite(LED_PIN, HIGH);
-  }
-  else {
-    // No fix, blink the LED once a second and stop further processing.
-    digitalWrite(LED_PIN, (millis() / 1000) % 2);
-    return;
-  }
+  //  if (gpsFix) {
+  //    digitalWrite(LED_PIN, HIGH);
+  //  }
+  //  else {
+  //     #if PERRY_DEBUG
+  //  Serial.print(F("No GPS fix"));
+  //  #endif
+  // No fix, blink the LED once a second and stop further processing.
+  //    digitalWrite(LED_PIN, (millis() / 1000) % 2);
+  //    return;
+  //  }
 
   // Periodically log the location.
-  if (logCounter == 0) {
-    // Log the current location to the path feed, then reset the counter.
-    logLocation(latitude, longitude, speed_kph, heading, altitude, path);
-    logCounter = LOGGING_PERIOD_SEC * 1000;
-  }
+  // if (logCounter == 0) {
+  // Log the current location to the path feed, then reset the counter.
+  logLocation(latitude, longitude, speed_kph, heading, altitude, path);
+  // logCounter = LOGGING_PERIOD_SEC * 1000;
+  // }
+  //Watchdog.disable();
+  digitalWrite(LED_BUILTIN, LOW);
+//  int sleepMS = Watchdog.sleep(LOGGING_PERIOD_SEC * 1000);
+int sleepLength = (60000) / 8000;
+for(int  i = 0; i < sleepLength; i++)
+{
+  LowPower.idle(SLEEP_8S, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_OFF, 
+                SPI_OFF, USART0_OFF, TWI_OFF);
+}
+#if PERRY_DEBUG
+//  Serial.print(F("Slept for "));
+//  Serial.print(sleepMS, DEC);
+//  Serial.println(F(" milliseconds."));
+#endif
+  //Watchdog.enable(8000);
 }

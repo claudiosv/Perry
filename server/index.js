@@ -9,6 +9,23 @@ const fs = require("fs");
 const toml = require("toml");
 const signale = require("signale");
 
+const GPSData = new mongoose.Schema({
+  device_id: String,
+  latitude: Number,
+  longitude: Number,
+  speed: Number,
+  heading: Number,
+  altitude: Number,
+  date_added: Date
+});
+const GPSModel = mongoose.model("location", GPSData, "paths");
+
+const DeviceSchema = new mongoose.Schema({
+  topic: String
+});
+
+const DeviceModel = mongoose.model("device", DeviceSchema, "devices");
+
 let config = {};
 format.extend(String.prototype, {});
 try {
@@ -36,18 +53,19 @@ mongoose.connect(
 );
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
-db.once("open", function() {
-  console.log("Connected to mongodb");
-});
 
 client.on("connect", () => {
-  console.log("connected to broker");
-  client.subscribe("arduino-vespa");
-  signale.log("Connected to arduino-vespa");
-  DeviceModel.find({}, function(err, device) {
+  signale.start("Connected to broker");
+});
+
+db.once("open", function() {
+  signale.start("Connected to mongodb");
+  DeviceModel.find({}, function(err, devices) {
     if (err) return console.error(err);
-    signale.debug("Found device: ", device.topic);
-    //client.subscribe(device.topic);
+    devices.forEach(function(device) {
+      signale.debug("Found device: ", device.topic);
+      client.subscribe(device.topic);
+    });
   });
 });
 
@@ -69,22 +87,6 @@ client.on("message", (topic, message) => {
   });
   return () => console.log(message.toString());
 });
-
-const GPSData = new mongoose.Schema({
-  device_id: String,
-  latitude: Number,
-  longitude: Number,
-  speed: Number,
-  heading: Number,
-  altitude: Number,
-  date_added: Date
-});
-const GPSModel = mongoose.model("location", GPSData, "paths");
-
-const DeviceSchema = new mongoose.Schema({
-  topic: String
-});
-const DeviceModel = mongoose.model("device", DeviceSchema, "devices");
 
 const server = restify.createServer({
   name: "perry"
@@ -132,10 +134,13 @@ server.get("/device/:id/info", (req, res, next) => {
 });
 
 server.get("/devices", (req, res, next) => {
-  DeviceModel.find({}, function(err, device) {
+  DeviceModel.find({}, function(err, devices) {
     if (err) return console.error(err);
-    signale.debug("Found device: ", device.topic);
-    res.send(device);
+    devices.forEach(function(device) {
+      signale.debug("Found device: ", device.topic);
+    });
+    res.send(devices);
+
     //client.subscribe(device.topic);
   });
 

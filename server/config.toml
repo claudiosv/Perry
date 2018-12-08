@@ -2,7 +2,7 @@
 [mongodb]
 username = "test"
 password = "testtest1"
-hostname = "ds255958.mlab.com"
+hostname = ""
 port = 55958
 database = "gps-data"
 

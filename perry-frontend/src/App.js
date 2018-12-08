@@ -13,9 +13,7 @@ class App extends Component {
   render() {
     return (
       <MuiThemeProvider theme={theme}>
-        <div>
-          <ClippedDrawer />
-        </div>
+        <ClippedDrawer />
       </MuiThemeProvider>
     );
   }
